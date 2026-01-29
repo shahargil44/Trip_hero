@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { TripDay, Message } from '../types';
 import { generateConciergeResponse } from '../services/geminiService';
+
+// Sanitize and format message text to prevent XSS attacks
+const sanitizeAndFormat = (text: string): string => {
+    // First sanitize the raw text to remove any malicious content
+    const sanitizedText = DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
+    // Then apply formatting (newlines to br, bold markdown)
+    const formattedText = sanitizedText
+        .replace(/\n/g, '<br/>')
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+    // Final sanitization allowing only safe tags
+    return DOMPurify.sanitize(formattedText, {
+        ALLOWED_TAGS: ['br', 'b', 'strong'],
+        ALLOWED_ATTR: []
+    });
+};
 
 interface AIChatModalProps {
     isOpen: boolean;
@@ -104,7 +120,7 @@ export const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose, dayCo
                                     : 'bg-white text-slate-700 border border-slate-200 self-end rounded-bl-sm shadow-sm'
                             }`}
                         >
-                            <div dangerouslySetInnerHTML={{ __html: msg.text.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
+                            <div dangerouslySetInnerHTML={{ __html: sanitizeAndFormat(msg.text) }} />
                         </div>
                     ))}
                     {isLoading && (
